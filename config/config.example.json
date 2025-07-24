@@ -1,0 +1,46 @@
+{
+  "dashboard_title": "Dashboard de la Maison",
+  "birthday_section_title": "Anniversaires",
+  "label_years": "ans",
+  "anniversaires": [
+{"nom": "Maman", "date": "1989-11-09"},
+  {"nom": "Papa", "date": "1980-05-31"},
+  {"nom": "Oncle Tom", "date": "1990-10-08"},
+  {"nom": "Tata Annie", "date": "1955-02-03"}
+  ],
+    "trash_days": {
+    "1": "icons/trash-bin.png",
+    "2": "icons/recycle-bin.png"
+  },
+  "ha_url": "https://URL.TO.HOMEASSISTANT",
+  "ha_token": "TOKEN_HA",
+  "timezone": "Europe/Paris",
+  "openweathermap": {
+    "api_key": "TOKEN_OPEN_WEATHERMAP",
+    "city": "Paris,FR",
+    "units": "metric",
+    "lang": "fr"
+  },
+  "energy_entities": [
+    {
+      "entity_id": "sensor.cout_hc_journalier",
+      "label": "Coût HC (€)"
+    },
+    {
+      "entity_id": "sensor.cout_hp_journalier",
+      "label": "Coût HP (€)"
+    },
+    {
+      "entity_id": "sensor.cout_total_journalier",
+      "label": "Coût Total (€)"
+    },
+    {
+      "entity_id": "sensor.production_solaire_journaliere",
+      "label": "Solaire (kWh)"
+    },
+    {
+      "entity_id": "sensor.cout_production_solaire_journaliere",
+      "label": "Coût Solaire (€)"
+    }
+  ]
+}
