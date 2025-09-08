@@ -45,7 +45,51 @@ HEADERS = {
     "Authorization": f"Bearer {TOKEN}",
     "Content-Type": "application/json",
 }
+def parse_time_to_minutes(t: str) -> int:
+    """Convertit HH:MM en minutes depuis minuit."""
+    h, m = map(int, t.split(":"))
+    return h * 60 + m
 
+def draw_timeline(draw, now, heures_creuses, x=50, y=700, width=1100, height=30):
+    """
+    Dessine une barre 24h avec heures pleines/creuses et flèche de l'heure actuelle.
+    - draw : objet PIL.ImageDraw.Draw
+    - now : datetime avec timezone
+    - heures_creuses : liste [{"start": "HH:MM", "end": "HH:MM"}]
+    - (x,y) : coordonnées du coin haut-gauche
+    - width, height : dimensions de la barre
+    """
+    # Couleurs
+    COLOR_HP = (180, 180, 180)   # Heures pleines (gris foncé)
+    COLOR_HC = (220, 220, 220)   # Heures creuses (gris clair)
+    COLOR_ARROW = (0, 0, 0)  # flèche noire
+
+    # Fond par défaut = heures pleines
+    draw.rectangle([x, y, x+width, y+height], fill=COLOR_HP)
+
+    # Dessiner les heures creuses
+    for plage in heures_creuses:
+        start = parse_time_to_minutes(plage["start"])
+        end = parse_time_to_minutes(plage["end"])
+
+        # Cas où la plage traverse minuit
+        if end <= start:
+            intervals = [(start, 24*60), (0, end)]
+        else:
+            intervals = [(start, end)]
+
+        for s, e in intervals:
+            sx = x + int((s / (24*60)) * width)
+            ex = x + int((e / (24*60)) * width)
+            draw.rectangle([sx, y, ex, y+height], fill=COLOR_HC)
+
+    # Position actuelle
+    minutes_now = now.hour * 60 + now.minute
+    arrow_x = x + int((minutes_now / (24*60)) * width)
+
+    # Flèche = triangle vers le bas
+    arrow = [(arrow_x, y-10), (arrow_x-8, y), (arrow_x+8, y)]
+    draw.polygon(arrow, fill=COLOR_ARROW)
 def get_sensor_state(entity_id):
     url = f"{HA_URL}/api/states/{entity_id}"
     response = requests.get(url, headers=HEADERS)
@@ -106,7 +150,9 @@ title_w, title_h = draw.textbbox((0, 0), title, font=font_title)[2:]
 draw.text(((IMG_WIDTH - title_w) / 2, 30), title, fill=TEXT_COLOR, font=font_title)
 
 # === DATE EN DESSOUS DU TITRE ===
+week_number = today.isocalendar().week  # Numéro de la semaine ISO
 formatted_date = today.strftime("%A %d %B %Y").capitalize()
+formatted_date += f" (S{week_number})"
 date_w, _ = draw.textbbox((0, 0), formatted_date, font=font_date)[2:]
 draw.text(((IMG_WIDTH - date_w) / 2, 110), formatted_date, fill=TEXT_COLOR, font=font_date)
 
@@ -213,6 +259,9 @@ position = (padding, IMG_HEIGHT - padding)
 # Affichage du texte
 draw.text(position, update_text, fill=TEXT_COLOR, font=font_text2)
 
+now = datetime.now(tz_here)
+heures_creuses = config.get("heures_creuses", [])
+draw_timeline(draw, now, heures_creuses)
 # === SAUVEGARDE ===
 image.save("maginkdash.png")
 print("✅ Image 'dashboard.png' générée avec succès.")

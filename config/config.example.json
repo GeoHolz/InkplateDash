@@ -2,6 +2,10 @@
   "dashboard_title": "Dashboard de la Maison",
   "birthday_section_title": "Anniversaires",
   "label_years": "ans",
+  "heures_creuses": [
+    {"start": "02:06", "end": "08:06"},
+    {"start": "22:06", "end": "00:06"}
+  ],
   "anniversaires": [
 {"nom": "Maman", "date": "1989-11-09"},
   {"nom": "Papa", "date": "1980-05-31"},
@@ -33,14 +37,6 @@
     {
       "entity_id": "sensor.cout_total_journalier",
       "label": "Coût Total (€)"
-    },
-    {
-      "entity_id": "sensor.production_solaire_journaliere",
-      "label": "Solaire (kWh)"
-    },
-    {
-      "entity_id": "sensor.cout_production_solaire_journaliere",
-      "label": "Coût Solaire (€)"
     }
   ]
 }
