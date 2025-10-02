@@ -46,50 +46,82 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 def parse_time_to_minutes(t: str) -> int:
-    """Convertit HH:MM en minutes depuis minuit."""
+    """Convertit HH:MM en minutes depuis minuit. 
+    '00:00' est interprété comme fin de journée (1440)."""
     h, m = map(int, t.split(":"))
-    return h * 60 + m
+    minutes = h * 60 + m
+    # Si l'heure est exactement 00:00, on retourne 1440 pour éviter l'effet de micro-segment
+    return 1440 if (h == 0 and m == 0) else minutes
 
-def draw_timeline(draw, now, heures_creuses, x=50, y=700, width=1100, height=30):
+def draw_timeline(draw, now, heures_creuses, x=50, y=700, width=1100, height=30, font=None):
     """
-    Dessine une barre 24h avec heures pleines/creuses et flèche de l'heure actuelle.
-    - draw : objet PIL.ImageDraw.Draw
-    - now : datetime avec timezone
-    - heures_creuses : liste [{"start": "HH:MM", "end": "HH:MM"}]
-    - (x,y) : coordonnées du coin haut-gauche
-    - width, height : dimensions de la barre
+    Dessine une barre 24h avec heures pleines/creuses, labels HC/HP, flèche et graduations horaires.
     """
     # Couleurs
     COLOR_HP = (180, 180, 180)   # Heures pleines (gris foncé)
     COLOR_HC = (220, 220, 220)   # Heures creuses (gris clair)
-    COLOR_ARROW = (0, 0, 0)  # flèche noire
+    COLOR_ARROW = (0, 0, 0)      # flèche noire
+    COLOR_TEXT = (0, 0, 0)       # texte noir
 
-    # Fond par défaut = heures pleines
+    # --- Helpers ---
+    def to_minutes(t: str) -> int:
+        h, m = map(int, t.split(":"))
+        return h * 60 + m
+
+    # Fond = HP par défaut
     draw.rectangle([x, y, x+width, y+height], fill=COLOR_HP)
 
-    # Dessiner les heures creuses
+    # Construire liste des segments HC
+    hc_segments = []
     for plage in heures_creuses:
-        start = parse_time_to_minutes(plage["start"])
-        end = parse_time_to_minutes(plage["end"])
-
-        # Cas où la plage traverse minuit
-        if end <= start:
-            intervals = [(start, 24*60), (0, end)]
+        start = to_minutes(plage["start"])
+        end = to_minutes(plage["end"])
+        if end <= start:  # traverse minuit
+            hc_segments.append((start, 24*60))
+            hc_segments.append((0, end))
         else:
-            intervals = [(start, end)]
+            hc_segments.append((start, end))
 
-        for s, e in intervals:
-            sx = x + int((s / (24*60)) * width)
-            ex = x + int((e / (24*60)) * width)
-            draw.rectangle([sx, y, ex, y+height], fill=COLOR_HC)
+    # Dessiner HC
+    for start, end in hc_segments:
+        sx = x + int((start / (24*60)) * width)
+        ex = x + int((end / (24*60)) * width)
+        draw.rectangle([sx, y, ex, y+height], fill=COLOR_HC)
 
-    # Position actuelle
+    # Déterminer segments HP
+    hp_segments = []
+    cursor = 0
+    for start, end in sorted(hc_segments):
+        if start > cursor:
+            hp_segments.append((cursor, start))
+        cursor = max(cursor, end)
+    if cursor < 24*60:
+        hp_segments.append((cursor, 24*60))
+
+    # --- Graduations horaires ---
+    # On prend toutes les bornes de segments (HC + HP)
+    ticks = set()
+    for s, e in hc_segments + hp_segments:
+        ticks.add(s)
+        ticks.add(e)
+    ticks = sorted(ticks)
+
+    for t in ticks:
+        label = f"{t//60:02d}:{t%60:02d}"
+        tx = x + int((t / (24*60)) * width)
+        if font:
+            tw, th = draw.textbbox((0, 0), label, font=font)[2:]
+            draw.text((tx - tw//2, y - th - 2), label, fill=COLOR_TEXT, font=font)
+
+    # Flèche vers le haut (sous la barre, pointant vers la barre)
     minutes_now = now.hour * 60 + now.minute
     arrow_x = x + int((minutes_now / (24*60)) * width)
-
-    # Flèche = triangle vers le bas
-    arrow = [(arrow_x, y-10), (arrow_x-8, y), (arrow_x+8, y)]
+    arrow = [(arrow_x, y+height), (arrow_x-8, y+height+10), (arrow_x+8, y+height+10)]
     draw.polygon(arrow, fill=COLOR_ARROW)
+
+
+
+
 def get_sensor_state(entity_id):
     url = f"{HA_URL}/api/states/{entity_id}"
     response = requests.get(url, headers=HEADERS)
@@ -218,7 +250,7 @@ if key in trash_days:
     if os.path.exists(icon_path):
         poubelle_icon = Image.open(icon_path).convert("RGBA").resize((100, 100))  # ajuster la taille
         # Coller en bas à droite (ajuster les coords si besoin)
-        image.paste(poubelle_icon, (IMG_WIDTH - 120, IMG_HEIGHT - 120), poubelle_icon)
+        image.paste(poubelle_icon, (20, 20), poubelle_icon)
       
 # === CALCUL DES DONNÉES HA ===
 # Liste des entités énergétiques (depuis config)
@@ -259,9 +291,10 @@ position = (padding, IMG_HEIGHT - padding)
 # Affichage du texte
 draw.text(position, update_text, fill=TEXT_COLOR, font=font_text2)
 
+
 now = datetime.now(tz_here)
 heures_creuses = config.get("heures_creuses", [])
-draw_timeline(draw, now, heures_creuses)
+draw_timeline(draw, now, heures_creuses, font=font_text2)
 # === SAUVEGARDE ===
 image.save("maginkdash.png")
 print("✅ Image 'dashboard.png' générée avec succès.")
