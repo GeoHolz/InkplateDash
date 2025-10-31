@@ -1,0 +1,11 @@
+services:
+  dashboard:
+    build: .
+    container_name: dashboard
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    ports:
+      - "25874:8000"
+    volumes:
+      - /opt/InkplateDash/config:/config:ro  # Monte le fichier de config en lecture seule
+    restart: unless-stopped
