@@ -245,6 +245,26 @@ except Exception as e:
 # Vérifier si le jour est dans la config (attention clé string dans JSON)
 jour_semaine_num = today.weekday()
 key = str(jour_semaine_num)
+week_num = today.isocalendar().week 
+is_even_week = (week_num % 2 == 0)
+
+icon_path = None  # Initialiser à None
+
+if key in trash_days:
+    entry = trash_days[key]
+
+    if isinstance(entry, dict):
+        # C'est une entrée avec règle (ex: jour "1")
+        week_rule = entry.get("week") # "even", "odd", ou None
+
+        if (week_rule == "even" and is_even_week) or \
+           (week_rule == "odd" and not is_even_week) or \
+           (not week_rule):  # Si la règle est absente, on affiche
+            icon_path = entry["icon"]
+
+    else:
+        # C'est une entrée simple (juste le chemin)
+        icon_path = entry
 if key in trash_days:
     icon_path = trash_days[key]
     if os.path.exists(icon_path):
