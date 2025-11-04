@@ -242,7 +242,8 @@ try:
 except Exception as e:
     print(f"⚠️ Erreur lors du chargement météo : {e}")
 
-# Vérifier si le jour est dans la config (attention clé string dans JSON)
+# --- 1. Détermination du chemin de l'icône ---
+
 jour_semaine_num = today.weekday()
 key = str(jour_semaine_num)
 week_num = today.isocalendar().week 
@@ -250,6 +251,7 @@ is_even_week = (week_num % 2 == 0)
 
 icon_path = None  # Initialiser à None
 
+# Ce bloc détermine le bon 'icon_path' (string) ou le laisse à 'None'
 if key in trash_days:
     entry = trash_days[key]
 
@@ -259,18 +261,21 @@ if key in trash_days:
 
         if (week_rule == "even" and is_even_week) or \
            (week_rule == "odd" and not is_even_week) or \
-           (not week_rule):  # Si la règle est absente, on affiche
-            icon_path = entry["icon"]
+           (not week_rule):
+            icon_path = entry["icon"] # 'icon_path' devient un string
 
     else:
         # C'est une entrée simple (juste le chemin)
-        icon_path = entry
-if key in trash_days:
-    icon_path = trash_days[key]
-    if os.path.exists(icon_path):
-        poubelle_icon = Image.open(icon_path).convert("RGBA").resize((100, 100))  # ajuster la taille
-        # Coller en bas à droite (ajuster les coords si besoin)
-        image.paste(poubelle_icon, (20, 20), poubelle_icon)
+        icon_path = entry # 'icon_path' devient un string
+
+# --- 2. Affichage de l'icône (SI elle a été trouvée) ---
+
+# On ne vérifie plus 'key in trash_days' (c'est déjà fait)
+# On vérifie juste si 'icon_path' a été défini (n'est pas None)
+if icon_path and os.path.exists(icon_path):
+    poubelle_icon = Image.open(icon_path).convert("RGBA").resize((100, 100))
+    # Coller en bas à droite (ajuster les coords si besoin)
+    image.paste(poubelle_icon, (20, 20), poubelle_icon)
       
 # === CALCUL DES DONNÉES HA ===
 # Liste des entités énergétiques (depuis config)
